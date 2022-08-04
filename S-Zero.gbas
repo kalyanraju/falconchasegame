@@ -1,0 +1,1021 @@
+// --------------------------------- //
+// Project:falcon chase
+// Start: Sunday, May 25, 2003
+// Compiler Version: 1.30520
+LOCAL phi, d1, d2, camx, camy, camz, camback, camfront, delta_time
+GLOBAL screenx, screeny, fntx, fnty,name$,inst$,mof$,d,nomus
+nomus=0
+lft=0
+d=0
+//	globtext$="                     This is a first preview of a 3D game created with GLBasic. The whole source code ascii file (S-Zero.gbas) is only 500 lines (15kB) "
+//	globtext$=globtext$+"If you want to write your own 3D game with the easiest basic language around, contact www.glbasic.com. "
+//	globtext$=globtext$+"Greetings to: Pia, Markus, Roli, Wolfi, Hemlos and all of my friends."
+
+
+	GETSCREENSIZE screenx, screeny
+	IF screenx < 640 THEN LOADFONT "Data/smalfont1.bmp", 0
+	GETFONTSIZE fntx, fnty
+SETSCREEN 800,600,1
+name$="Name: "
+INPUT name$,120,202
+inst$="Institution name: "
+INPUT inst$,120,204
+mof$="Male/Female: "
+INPUT mof$,120,206
+
+objects:
+	Statusbar(0)
+	LOADSPRITE "Data/track0.bmp", 0
+	LOADSPRITE "Data/start.bmp",18
+	LOADSPRITE "Data/male.bmp",19
+	LOADSOUND "Data/Monster1.wav",7,1
+	LOADSOUND "Data/rain12.wav",8,1
+	LOADSOUND "Data/thunder.wav",9,1
+	LOADSOUND "Data/hit.wav",10,1
+	LOADSOUND "Data/water1.wav",6,1
+	LOADSOUND "Data/laser.wav",2,1
+	LOADSOUND "Data/Explo.wav",3,1
+	LOADSOUND "Data/over.wav",4,1
+	LOADSOUND "Data/Bullet.wav",5,1
+	LOADSOUND "Data/sea.wav",11,1
+	X_LOADOBJ "Data/croc.ddd",22
+	LOADSPRITE "Data/croc.bmp",22
+	X_LOADOBJ "Data/tree.ddd",23
+	LOADSPRITE "Data/tree.bmp",23
+	X_LOADOBJ "Data/drag.ddd",24
+	Statusbar(0.025)
+	LOADSPRITE "Data/hud.bmp", 50
+	Statusbar(0.05)
+
+	X_LOADOBJ "Data/car.ddd", 1
+	X_LOADOBJ "Data/mis.ddd", 17
+	Statusbar(0.1)
+	LOADSPRITE "Data/engine1.bmp", 1
+	X_LOADOBJ "Data/engine1.ddd", 16
+	Statusbar(0.15)
+	LOADSPRITE "Data/engine1e.bmp", 2
+	Statusbar(0.2)
+	LOADSPRITE "Data/engine1s.bmp", 9
+	Statusbar(0.25)
+
+	// 10 = Track
+	Statusbar(0.3)
+	X_LOADOBJ "Data/burner.ddd", 11
+	Statusbar(0.35)
+	X_LOADOBJ "Data/skybox.ddd", 12
+	Statusbar(0.4)
+	LOADSPRITE "Data/sky2.bmp", 12
+	LOADSPRITE "Data/tree2.bmp",20
+	X_LOADOBJ "Data/tree2.ddd",20
+	X_LOADOBJ "Data/ship.ddd",21
+
+	Statusbar(0.5)
+		X_OBJSTART 13
+		X_OBJADDVERTEX -150, 0,  -150,  0,  0, RGB(255,255,255)
+		X_OBJADDVERTEX  150, 0,  -150, 500,  0, RGB(255,255,255)
+		X_OBJADDVERTEX -150, 0,  150,  0, 250, RGB(255,255,255)
+		X_OBJADDVERTEX  150, 0,  150, 500, 250, RGB(255,255,255)
+	X_OBJEND
+	Statusbar(0.55)
+	LOADSPRITE "Data/back1.bmp", 13
+
+	Statusbar(0.59)
+	X_LOADOBJ  "Data/gate.ddd", 14
+	Statusbar(0.62)
+	LOADSPRITE "Data/gate.bmp", 14
+
+	Statusbar(0.67)
+	X_LOADOBJ  "Data/MOUNTS.ddd", 15
+	Statusbar(0.7)
+	LOADSPRITE "Data/build1.bmp", 15
+
+	LOADSOUND "Data/ready.wav",1,1
+	Statusbar(0.75)
+
+BEGIN:
+	start()
+DIM ship_pos[10][3] // num, xyz
+DIM ship_dir[10][3] // num, phi+yaw+directional
+DIM ship_spd[10]
+
+DIM fire_pos[10][3]
+DIM mean_phi[100]
+DIM mean_typ[100]
+DIM mean_pos[100][3]
+
+DIM best_times[10]
+	Statusbar(0.88)
+
+	FOR i=0 TO 9
+		best_times[i] = 1200 // 2 min
+	NEXT
+
+	max_means = 16
+	FOR i=0 TO max_means
+		mean_phi[i] = -i // 360/max_means * i
+		mean_typ[i] = MOD(i, 4)
+	NEXT
+
+	camback=5; camfront = 20
+	Statusbar(1.0)
+
+
+
+ g_Level = StageSelect();// StageSelect()
+
+	ship_pos[0][0] = DistAtPhi(g_Level-1, 0)
+	ship_pos[0][1] = HeightAtPhi(g_Level, 0)
+	ship_pos[0][2] = 0
+	ship_spd[0] = 0// 25
+	ship_dir[0][0] = DirAtPhi(g_Level, 0)
+
+
+DIM spd[801]
+DIM sy[801]
+ FOR x=0 TO 800
+  spd[x]=RND(3)+10
+  sy[x]=-RND(600)
+ NEXT
+
+
+	PrepareTrackObjects(g_Level, 1.0)
+	SETMOUSE 320,0
+	HUSH
+	PLAYSOUND (1,0,1)
+	IF nomus=0 THEN PLAYMUSIC "Data/track2.mid"
+main:
+
+	WHILE TRUE
+	PLAYSOUND(6,0,1)
+	snd=RND(300)
+	IF snd=1 THEN PLAYSOUND(7,0,1)
+	IF snd=3
+	 p=PLAYSOUND (9,0,1)
+	 PLAYSOUND(9,0,1)
+	ENDIF
+	IF snd=7 THEN PLAYSOUND(11,0,1)
+	snd=0
+	IF KEY(1)
+	HUSH
+	 GOTO BEGIN
+	 ENDIF
+		IF max_means=-1 OR KEY(64)OR KEY(01) THEN details(0)
+		IF damage*100>100 THEN details(1)
+		phi = CheckCollision(g_Level, phi, max_means)
+		MovePlayer(g_Level, delta_time, phi)
+		MoveMeans(g_Level, delta_time, max_means)
+
+		phi = ATAN(ship_pos[0][2], ship_pos[0][0])
+		d1 = DistAtPhi(g_Level, phi-camback)
+		d2 = DistAtPhi(g_Level, phi+camfront)
+		camx = d1*COS(phi-camback)
+		camy = 50 + HeightAtPhi(g_Level, phi-camback)
+		camz = d1*SIN(phi-camback)
+
+		X_MAKE3D 10, 4069, 60
+		X_MIPMAPPING TRUE
+		X_CAMERA camx, camy, camz, ship_pos[0][0], ship_pos[0][1]+60, ship_pos[0][2]
+
+
+		// Skybox
+		X_MOVEMENT camx, -600, camz
+		X_SCALING 1, 1, 1
+		X_SETTEXTURE 12,-1
+		X_DRAWOBJ 12, 0
+		X_CLEAR_Z
+
+
+
+		IF SOUNDPLAYING(9)OR KEY(56) THEN blast()
+
+		IF camy>-40
+			col=RGB(255, 255, 255)
+		ELSE
+			col=RGB(64, 64, 55)
+		ENDIF
+		//X_AMBIENT_LT 0,RGB(255,255,255)
+		X_SPOT_LT -2, col, 0,100,0, 100, -10, 0,0
+		IF KEY(42) THEN X_CAMERA ship_pos[0][0], ship_pos[0][1]+700, ship_pos[0][2]-500,    ship_pos[0][0], ship_pos[0][1]+5, ship_pos[0][2] // Top view to ship
+		IF KEY(29) THEN X_CAMERA 0, 400, -2500,    0,0,0 // Overview of all
+		IF KEY(15) THEN X_CAMERA ship_pos[0][0], ship_pos[0][1]-700, ship_pos[0][2]+700,    ship_pos[0][0]+10, ship_pos[0][1], ship_pos[0][2]
+
+		IF KEY(56) THEN PLAYSOUND(10,0,1)//LIMITFPS 30
+		IF KEY(3) THEN LIMITFPS 60
+		IF KEY(4) THEN LIMITFPS -1
+//	X_CULLMODE 1
+
+		X_SETTEXTURE 0,-1
+		// We draw the track in absolute coords
+		X_SCALING 1,1,1; X_MOVEMENT 0,0,0
+		X_DRAWOBJ 10, 0
+
+	X_MOVEMENT (camx+1500), 200, 250
+	X_ROTATION (camx*10+180),0,1,0
+		X_SCALING 150, 150, 150
+		X_SETTEXTURE 9,-1
+		X_DRAWOBJ 24, 0
+
+X_MOVEMENT (camx+500), 60, camy-1000
+	X_ROTATION -(camx*10+90),0,1,0
+		X_SCALING 100, 100, 100
+		X_SETTEXTURE 9,-1
+		X_DRAWOBJ 24, 0
+
+X_SPOT_LT 0, RGB(255,255,255), 0,100,0, 100, -10, 0,0
+			// Ship
+
+		X_MOVEMENT ship_pos[0][0]+30, ship_pos[0][1]+8+lft, ship_pos[0][2]
+		X_SCALING 4, 4,4
+		X_ROTATION ship_dir[0][2]*10, 1,0, 0
+		X_ROTATION ship_dir[0][0]+90, 0, 1, 0
+		X_SETTEXTURE 9,-1
+		X_DRAWOBJ 1, 0
+	//	X_SPOT_LT -1, RGB(255,255,255), 0,100,0, ship_pos[0][0]+30, ship_pos[0][1]+8+lft, ship_pos[0][2],0
+//	X_SPOT_LT -1, RGB(0,255,255), ship_pos[0][0]+30, ship_pos[0][1]+8+lft, ship_pos[0][2],ship_pos[0][0]+30, ship_pos[0][1], ship_pos[0][2],0
+
+IF KEY(57) THEN fire()
+
+	IF SOUNDPLAYING(chk) THEN attack()
+	IF damage>25 AND damage<50 THEN ship_spd[0]=ship_spd[0]+20
+	IF damage>50 AND damage<70 THEN ship_spd[0]=ship_spd[0]+40
+
+
+		// Flame
+		X_CULLMODE 0
+		ALPHAMODE 1
+		X_SCALING 1, 1, ship_spd[0]
+		X_MOVEMENT ship_pos[0][0]+30, ship_pos[0][1]+8+lft, ship_pos[0][2]
+		//X_ROTATION 50, 0, 0,1
+		X_ROTATION ship_dir[0][0]+180, 0, 1, 0
+		X_DRAWOBJ 11,0
+
+
+		// Shadow
+		//X_CULLMODE 1
+	//	X_SETTEXTURE 9, -1
+	//	X_MOVEMENT ship_pos[0][0], ship_pos[0][1], ship_pos[0][2]
+	//	X_SCALING 3, 3, 3
+	//	X_ROTATION 180, 0, 0, 1
+	//	X_ROTATION ship_dir[0][0]+270, 0, 1, 0
+	//	ALPHAMODE -.7
+	//	X_DRAWOBJ 1, 0
+	//	ALPHAMODE 0
+
+
+		ShowMeans(g_Level, max_means)
+		DrawEnvironment(g_Level)
+		//X_SPOT_LT -2, RGB(255,55,25), ship_pos[0][0]+30, ship_pos[0][1]+8+lft, ship_pos[0][2],ship_pos[0][0]+30, ship_pos[0][1], ship_pos[0][2],0
+		//X_SPOT_LT -2, RGB(255,255,255), ship_pos[0][0]+30, ship_pos[0][1]+8+lft, ship_pos[0][2],ship_pos[0][0]+30, ship_pos[0][1], ship_pos[0][2],0
+		ALPHAMODE 0
+		// surface
+		X_CULLMODE 0
+		X_SETTEXTURE 13,-1
+		ALPHAMODE .5
+		X_MOVEMENT 0,-30,0
+		X_SCALING 300, 300, 300
+		X_DRAWOBJ 13, 0
+		ALPHAMODE 0
+
+		// 2D drawings
+		X_MAKE2D
+
+
+
+
+
+
+IF max_means<7
+LOCAL x1
+PLAYSOUND(8,0,1)
+ FOR x1=0 TO 800
+  c=spd[x1]
+  y1=sy[x1]
+  y1=y1+c
+  IF y1>600 THEN y1=0
+  sy[x1]=y1
+  c=c*64-1
+  DRAWLINE  x1, y1, x1+2, y1+10, RGB(c, c, c)
+
+ NEXT
+ENDIF
+
+
+
+
+
+
+
+
+
+
+
+
+
+			IF last_phi>phi AND phi<1
+			IF lap_time < best_times[g_Level]
+				best_times[g_Level] = lap_time
+			ENDIF
+			lap_time=0
+		ENDIF
+		// Speed-o-meter
+		y_pos = 480-128
+		ALPHAMODE 0
+		FOR x=0 TO ship_spd[0]*11.7 //
+		DRAWLINE 41+x, y_pos+10, 41+x, y_pos+12+x/10, RGB(SIN(x/3)*255, 255-SIN(x/6)*255, 50)
+		NEXT
+		// Curve-o-meter
+		FILLRECT 186, 362, 186+ship_dir[0][2]*16, 364, RGB(255,0,0)
+		ALPHAMODE 0
+		SPRITE 50, 0, y_pos
+
+		// Draw track as 2d-graphics
+		IF KEY(56)
+			FOR x=0 TO 360
+			FILLRECT x, DistAtPhi(g_Level, x), x+1, DistAtPhi(g_Level, x), RGB(255, 0, 0)
+			NEXT
+		ENDIF
+
+	IF y=1 THEN PRINT "mission completed", 150,50
+		// FPS counter:
+		IF delta_time>3
+			fps = ((10000/delta_time)+fps)/2
+			delay=delay+delta_time
+			IF delay>1000 // 1/2 sec
+				delay=0
+				ShowFPS=fps
+			ENDIF
+			IF fps>1000 THEN fps=0
+		ENDIF
+		PRINT "FPS: " + INTEGER(ShowFPS) + " @ " + delta_time, 0, screeny-fnty // + dtime, 0,0
+
+		// New lap?
+
+		// Lap time
+		lap_time=lap_time+delta_time
+		PRINT "chase time: " + NiceTime$(lap_time) + " Spd: " + FORMAT$(5,1,ship_spd[0]*10), 0, 0
+		PRINT "score: "+((score)*100),0,200
+		PRINT "Damage: "+(damage*100)+"%",0,220
+		PRINT "Best:" + NiceTime$(best_times[g_Level]), 0, 20
+		last_phi=phi
+		delta_time = GETTIMER()
+		SHOWSCREEN
+		IF KEY(01) THEN start()
+	WEND
+
+// ----------------------------------------- //
+// Display time nicely
+// ----------------------------------------- //
+FUNCTION NiceTime$: misecs
+	LOCAL mns, sec, ten, a$
+	mns = INTEGER(misecs/60000); misecs=misecs-mns*60000
+	sec = INTEGER(misecs/1000);  misecs=misecs-sec*1000
+	ten = INTEGER(misecs/100)
+	a$ = "" + mns + "'" + sec + "''" + ten
+RETURN a$
+ENDFUNCTION
+
+// ----------------------------------------- //
+// Draw the environment for each level (house blocks...)
+// ----------------------------------------- //
+FUNCTION DrawEnvironment: nLevel
+	LOCAL	d, p
+//	 Gate
+X_MOVEMENT DistAtPhi(nLevel, 0)+100, HeightAtPhi(nLevel, 0), 0
+	X_SCALING WidthAtPhi(nLevel, 0)/40, 60, 100
+	X_ROTATION DirAtPhi(nLevel, 0), 0,1,0
+		X_SETTEXTURE 20,-1
+	X_DRAWOBJ 20, 0
+
+	X_MOVEMENT DistAtPhi(nLevel, 0), HeightAtPhi(nLevel, 0), 0
+	X_SCALING WidthAtPhi(nLevel, 0)/40, 1, 1
+	X_ROTATION DirAtPhi(nLevel, 0), 0,1,0
+	X_SETTEXTURE 14,-1
+	X_DRAWOBJ 14, 0
+
+
+
+FOR p = 30 TO 360 STEP 50
+d = DistAtPhi(nLevel, p) * .65
+phi=GETTIMER()/100
+	X_MOVEMENT d*COS(p)+1000, -50, d*SIN(p)-1000
+	X_SCALING 200, 200, 200
+	X_ROTATION DirAtPhi(nLevel, 0)+phi, 1,0,0
+	X_SETTEXTURE 22,-1
+	X_DRAWANIM 22, 0, 4, phi*100 /15, TRUE
+
+			X_MOVEMENT d*COS(290)+1500, -60, d*SIN(290)-1400
+	X_SCALING 100, 200, 200
+	X_ROTATION DirAtPhi(nLevel, 0)+phi, 1,0,0
+	X_SETTEXTURE 21,1
+	X_DRAWANIM 21, 0, 4, MOD(phi*100 / 15, 100)/100.0, TRUE
+
+		X_MOVEMENT d*COS(p), -60, d*SIN(p) // On top of water
+		X_SCALING 100,200,200
+		X_SETTEXTURE 15,-1
+		X_DRAWOBJ 15, 0
+	NEXT
+
+ENDFUNCTION
+// ----------------------------------------- //
+// DISTATPHI returns the distance of the center of the
+// track for the given angle phi
+// ----------------------------------------- //
+FUNCTION DistAtPhi: nLevel, phi
+	SELECT nLevel
+	CASE 1
+		RETURN 1900+200*SIN(phi) // Simple circle
+	CASE 2
+		RETURN 500+(2+SIN(2*phi))*1500
+	CASE 3
+		RETURN 500+(4+SIN(phi*3)*COS(phi)) * 1400
+	CASE 4
+		RETURN 1900+200*SIN(phi)
+	ENDSELECT
+ENDFUNCTION
+// ----------------------------------------- //
+// Height of the track for the given angle phi
+// ----------------------------------------- //
+FUNCTION HeightAtPhi: nLevel, phi
+	SELECT nLevel
+	CASE 1
+		RETURN 80*SIN(phi) // Flat ground
+	CASE 2
+		RETURN 150*SIN(phi)
+	CASE 3
+		RETURN 80*COS(phi)
+	CASE 4
+		RETURN 80+SIN(phi)
+	ENDSELECT
+ENDFUNCTION
+
+// ----------------------------------------- //
+// Width of the track for the given angle phi
+// ----------------------------------------- //
+FUNCTION WidthAtPhi: nLevel, phi
+	SELECT nLevel
+	CASE 1
+		RETURN 180 // Constant width
+	CASE 2
+		RETURN 180 + (1+COS(phi))*30
+	CASE 3
+		RETURN 180 + (1+SIN(phi*3))*20
+	CASE 4
+		RETURN 180
+	ENDSELECT
+ENDFUNCTION
+
+// ----------------------------------------- //
+// Direction of the track for the given angle phi
+// ----------------------------------------- //
+FUNCTION DirAtPhi: nLevel, phi
+LOCAL dist
+	dist = DistAtPhi(nLevel, phi-0.001)
+	RETURN ATAN(DistAtPhi(nLevel, phi)-dist, TAN(.001) * dist) - phi
+ENDFUNCTION
+
+// ----------------------------------------- //
+// Get the 'real' track length in a given range
+// ----------------------------------------- //
+FUNCTION RangeLength: nLevel, phifrom, phito
+LOCAL	p1[], d
+DIM	p1[3]
+	d = DistAtPhi(nLevel, phifrom)
+	p1[0] = COS(phifrom)*d
+	p1[2] = SIN(phifrom)*d
+	p1[1] = HeightAtPhi(nLevel, phifrom)
+
+	d = DistAtPhi(nLevel, phito)
+	p1[0] = p1[0] - COS(phito)*d
+	p1[2] = p1[2] - SIN(phito)*d
+	p1[1] = p1[1] - HeightAtPhi(nLevel, phito)
+
+	d = SQR(p1[0]*p1[0] + p1[2]*p1[2] + p1[2]*p1[2])
+	RETURN d
+ENDFUNCTION
+
+// ----------------------------------------- //
+// Draw the racing track in a given range
+// ----------------------------------------- //
+FUNCTION DrawTrackRange: nLevel, facwidth, phistart, phiend
+
+
+LOCAL sphi1, sphi2, cphi1, cphi2, d1, d2, h1, h2, tw1, tw2, bw, hw, phi, delta
+
+//	phiend = phiend + .3 // No gaps
+	d1 = DistAtPhi(nLevel, phistart)/facwidth
+	h1 = HeightAtPhi(nLevel, phistart)/facwidth
+	tw1 = WidthAtPhi(nLevel, phistart)*facwidth
+	mx1 = d1*COS(phistart)
+	my1 = d1*SIN(phistart)
+
+	bw=-DirAtPhi(nLevel, phistart)
+	cphi1 = COS(bw)
+	sphi1 = SIN(bw)
+
+delta = 5
+	FOR phi=phistart+delta TO phiend STEP delta
+		d2 = DistAtPhi(nLevel, phi)/facwidth
+		h2 = HeightAtPhi(nLevel, phi)/facwidth
+		tw2 = WidthAtPhi(nLevel, phi)*facwidth
+		mx2 = d2*COS(phi)
+		my2 = d2*SIN(phi)
+
+		bw=-DirAtPhi(nLevel, phi)
+		cphi2 = COS(bw)
+		sphi2 = SIN(bw)
+
+		bw = 17
+		hw = 12
+
+		//  |\             /|
+		//  | \___________/ | hw
+		//  bw| tw  |  tw |bw
+		// Leftmost plane
+		X_OBJADDVERTEX mx2+(-tw2-bw)*cphi2, h2+hw*2   , my2+(-tw2-bw)*sphi2, 0    , 1, RGB(255,255,255)
+		X_OBJADDVERTEX mx1+(-tw1-bw)*cphi1, h1+hw*2   , my1+(-tw1-bw)*sphi1, 0    , 0, RGB(255,255,255)
+		X_OBJADDVERTEX mx2+(-tw2-bw)*cphi2, h2+hw, my2+(-tw2-bw)*sphi2, 0.125, 1, RGB(255,255,255)
+		X_OBJADDVERTEX mx1+(-tw1-bw)*cphi1, h1+hw, my1+(-tw1-bw)*sphi1, 0.125, 0, RGB(255,255,255)
+
+		// Left track border
+		X_OBJADDVERTEX mx2+(-tw2   )*cphi2, h2   , my2+(-tw2   )*sphi2, 0.25 , 1, RGB(255,255,255)
+		X_OBJADDVERTEX mx1+(-tw1   )*cphi1, h1   , my1+(-tw1   )*sphi1, 0.25 , 0, RGB(255,255,255)
+
+		// Track
+		X_OBJADDVERTEX mx2+(tw2   )*cphi2, h2   , my2+(tw2   )*sphi2, 0.75 , 1, RGB(255,255,255)
+		X_OBJADDVERTEX mx1+(tw1   )*cphi1, h1   , my1+(tw1   )*sphi1, 0.75 , 0, RGB(255,255,255)
+
+		// right track border
+		X_OBJADDVERTEX mx2+(tw2+bw)*cphi2, h2+hw, my2+(tw2+bw)*sphi2, 0.875, 1, RGB(255,255,255)
+		X_OBJADDVERTEX mx1+(tw1+bw)*cphi1, h1+hw, my1+(tw1+bw)*sphi1, 0.875, 0, RGB(255,255,255)
+
+		// rightmost plane
+		X_OBJADDVERTEX mx2+(tw2+bw)*cphi2, h2+hw*2   , my2+(tw2+bw)*sphi2, 1    , 1, RGB(255,255,255)
+		X_OBJADDVERTEX mx1+(tw1+bw)*cphi1, h1+hw*2   , my1+(tw1+bw)*sphi1, 1    , 0, RGB(255,255,255)
+		X_OBJNEWGROUP
+		mx1=mx2
+		my1=my2
+		tw1=tw2
+		h1= h2
+		sphi1=sphi2
+		cphi1=cphi2
+	NEXT
+ENDFUNCTION
+
+
+
+
+// ----------------------------------------- //
+// Draw the complete racing track
+// ----------------------------------------- //
+FUNCTION PrepareTrackObjects: nLevel, facwidth
+	X_OBJSTART 10
+	DrawTrackRange (nLevel, facwidth, 0, 360)
+	X_OBJEND
+ENDFUNCTION
+
+
+
+// ----------------------------------------- //
+// Keyboard input, acceleration and direction
+// ----------------------------------------- //
+FUNCTION MovePlayer: nLevel, delta_time, phi
+LOCAL sx, sy, mx, my, b1, b2
+	GETSCREENSIZE sx, sy
+	sx=sx/2
+	MOUSESTATE mx, my, b1, b2
+	mx = (sx-mx)/sx
+	IF mx<-1 THEN mx=-1
+	IF mx>1  THEN mx=1
+	delta_time=delta_time/360 // millihours
+	// Speed-Up/Slow Down
+	// acc = Fmove - v*C_Roll) / mass; v=v0+dt*a; pos=pos+v*dt
+	acc = MOUSEAXIS(3)*4 - ship_spd[0]*.07
+	//lft=MOUSEAXIS(4)*400
+	ship_spd[0] = ship_spd[0] + acc*delta_time
+	IF MOUSEAXIS(4)
+	lft=lft+GETTIMER()/100
+	ELSE
+	lft=lft-GETTIMER()/100
+	ENDIF
+	IF lft<10 THEN ship_spd[0]=0.5
+	IF lft<0 THEN lft=0
+	IF lft>80 THEN lft=80
+	IF damage>100
+		d=100
+		WideScroller("readme.txt")
+	 	details(1)
+	 ENDIF
+	 IF KEY(01) THEN start()
+	IF ship_spd[0]>25 THEN ship_spd[0] = 25
+	IF KEY(184) THEN ship_spd[0]=35
+
+	// Direction
+	delta = mx*20/(ABS(ship_dir[0][2])*5+50) // delta angle of front wheels
+	IF delta<>0
+		// Radius = L/sin(delta); L = distance of front->back wheels
+		R = 5 / SIN(delta)
+		// omega = v / R
+		ship_dir[0][2] = ship_spd[0] / R * 360 // rad->deg
+		// Limit radial velocity, since your stomach wouldn't let you do in
+		// real life, either.
+		IF ABS(ship_dir[0][2])>15
+			IF ship_dir[0][2]<0; ship_dir[0][2]=-15; ELSE; ship_dir[0][2]=15; ENDIF
+		ENDIF
+	ELSE
+		ship_dir[0][2]=0
+	ENDIF
+
+	// add rotation and velocity
+	ship_dir[0][0] = ship_dir[0][0] + ship_dir[0][2]*delta_time*2
+	speed = ship_spd[0]*delta_time*10
+
+	// Rotate+Move (X,Z)
+	ship_pos[0][0] = ship_pos[0][0] + speed * SIN(ship_dir[0][0])
+	ship_pos[0][2] = ship_pos[0][2] + speed * COS(ship_dir[0][0])
+
+	// Up/down
+	ship_pos[0][1] = HeightAtPhi(nLevel, phi) //ship_pos[0][1] + speed * SIN(ship_dir[0][1])
+
+ENDFUNCTION
+
+
+// ----------------------------------------- //
+// Check collisions with the border
+// ----------------------------------------- //
+FUNCTION CheckCollision: nLevel, phi, max_mean
+	LOCAL dist, dist2, tw, h, phi_new, mx, my
+
+	dist2=1000000
+	phi_new = phi
+	FOR dphi=phi-8 TO phi+8 STEP .5
+		// Get closest point to racing track
+		dist = DistAtPhi(nLevel, dphi)
+		mx = dist*COS(dphi) - ship_pos[0][0]
+		my = dist*SIN(dphi) - ship_pos[0][2]
+		dist = SQR(mx*mx + my*my)
+		IF dist<dist2
+			dist2=dist
+			phi_new = dphi
+		ENDIF
+	NEXT
+	phi = phi_new
+
+	tw = WidthAtPhi(nLevel, phi)
+	IF dist2>tw // Crashed to border
+		// Which side?
+		dist = DistAtPhi(nLevel, phi)
+
+		dist2 = SQR (ship_pos[0][2] * ship_pos[0][2] + ship_pos[0][0] * ship_pos[0][0])
+		phi_new = DirAtPhi(nLevel, phi) // ATAN(DistAtPhi(nLevel, phi+.1)-dist, TAN(.1) * dist) - phi
+
+		// Outer bounds
+		IF dist2 > dist+tw // dist+tw-2
+			ship_pos[0][0] = dist*COS(phi) + tw*COS(-phi_new)
+			ship_pos[0][2] = dist*SIN(phi) + tw*SIN(-phi_new)
+			ship_dir[0][0] = phi_new-3
+		//	ship_dir[0][2] = 0
+			ship_spd[0] = ship_spd[0] * .5
+			PLAYSOUND(10,0,1)
+			damage=damage+0.01
+
+		ENDIF
+		// Inner bounds
+		IF dist2 < dist-tw
+			ship_pos[0][0] = dist*COS(phi) - tw*COS(-phi_new)
+			ship_pos[0][2] = dist*SIN(phi) - tw*SIN(-phi_new)
+			ship_dir[0][0] = phi_new+1
+		//	ship_dir[0][2] = 0
+			ship_spd[0] = ship_spd[0] * .5
+			PLAYSOUND(10,0,1)
+			damage=damage+0.01
+
+		ENDIF
+
+		// Too far out
+	//IF ABS(dist2 - dist) > tw + 3
+	//	ship_pos[0][0] = dist * COS(phi)
+	//	ship_pos[0][2] = dist * SIN(phi)
+	//	ship_spd[0] = 0
+	//		ship_dir[0][0] = phi_new // -phi-2//ship_dir[0]-1
+//		ENDIF
+	ENDIF
+
+	// Crash with enemy
+	FOR n=0 TO max_mean
+		mx = mean_pos[n][0]-ship_pos[0][0]
+		my = mean_pos[n][2]-ship_pos[0][2]
+		IF mx*mx+my*my < 3000 AND KEY(57)
+		PLAYSOUND(3,0,1)
+			ship_spd[0]=ship_spd[0]*0.2
+			max_means=max_means-1
+			score=score+1
+			blast()
+		ENDIF
+		IF mx*mx+my*my > 3000 AND mx*mx+my*my < 5000
+		chk=PLAYSOUND (5,0,1)
+			damage=damage+0.0001
+		ENDIF
+	NEXT
+
+	RETURN phi
+ENDFUNCTION
+
+
+FUNCTION MoveMeans: nLevel, delta_time, max_mean
+	LOCAL n, d, p, b
+
+	FOR n=0 TO max_mean
+		mean_phi[n] = mean_phi[n] + (.005+(.0008*(n+8))) * delta_time
+		IF mean_phi[n]>360 THEN mean_phi[n]=mean_phi[n]-360
+		p = mean_phi[n]
+		d = DistAtPhi(nLevel, p)
+		b = .7*WidthAtPhi(nLevel, p)
+		SELECT mean_typ[n]
+		CASE 0 // mittig
+			mean_pos[n][0] = COS(p) * d
+			mean_pos[n][2] = SIN(p) * d
+		CASE 1 // Links
+			mean_pos[n][0] = COS(p) * (d+b)
+			mean_pos[n][2] = SIN(p) * (d+b)
+
+		CASE 2 // rechts
+			mean_pos[n][0] = COS(p) * (d-b)
+			mean_pos[n][2] = SIN(p) * (d-b)
+
+		CASE 3 // ZigZag
+			b = b * SIN(p*8)
+			mean_pos[n][0] = COS(p) * (d+b)
+			mean_pos[n][2] = SIN(p) * (d+b)
+		ENDSELECT
+
+		mean_pos[n][1] = HeightAtPhi(nLevel, p)
+	NEXT
+ENDFUNCTION
+
+FUNCTION ShowMeans: nLevel, max_mean
+	X_SCALING 3, 3, 3
+	FOR n=0 TO max_mean
+		X_CULLMODE 1
+		X_SETTEXTURE 2,-1
+		X_SCALING 50,50,50
+		X_MOVEMENT mean_pos[n][0], mean_pos[n][1]+9, mean_pos[n][2]
+		X_ROTATION DirAtPhi(nLevel, mean_phi[n]), 0,1,0
+
+		X_DRAWOBJ 16, 0
+
+		// Flame
+		X_CULLMODE 0
+		ALPHAMODE 1
+		X_SCALING 4,4,4
+		X_ROTATION ship_dir[0][0]+180, 0, 1, 0
+		X_DRAWOBJ 11,0
+
+		// Shadow
+		X_CULLMODE 1
+		X_SETTEXTURE 9,-1
+		X_MOVEMENT mean_pos[n][0], mean_pos[n][1], mean_pos[n][2]
+		X_ROTATION DirAtPhi(nLevel, mean_phi[n])+90, 0,1,0
+
+		ALPHAMODE -.1
+		X_DRAWOBJ 16, 0
+		ALPHAMODE 0
+
+	NEXT
+ENDFUNCTION
+
+
+FUNCTION StageSelect:
+g_Level=1
+LOCAL p, h, h2
+	p=0
+	Statusbar(.5)
+	PrepareTrackObjects(g_Level, 2)
+	Statusbar(1)
+	WHILE TRUE
+		IF KEY(203) OR KEY(205) OR MOUSEAXIS(4)
+			IF KEY(203)                 THEN g_Level=g_Level-1
+			IF KEY(205) OR MOUSEAXIS(4) THEN g_Level=g_Level+1
+			IF g_Level>3 THEN g_Level=1
+			IF g_Level<1 THEN g_Level=3
+			WHILE KEY(203) OR KEY(205) OR MOUSEAXIS(4); WEND
+			Statusbar(.5)
+			PrepareTrackObjects(g_Level, 2)
+			Statusbar(1)
+		ENDIF
+		IF KEY(200) OR  KEY(57) OR MOUSEAXIS(3) THEN GOTO skip
+		p=p+1
+		IF p>360 THEN p=p-360
+		X_MAKE3D 1, 4000, 45
+		X_CAMERA 0, 400, -1500,    0,0,0 // Overview of all
+		X_MIPMAPPING TRUE
+		X_MOVEMENT 0,0,0
+		X_SCALING .5,.5,.5
+		X_ROTATION p, 0, 1, 0
+		X_SETTEXTURE 0,-1
+		X_DRAWOBJ 10, 0
+		ALPHAMODE .5
+		X_SETTEXTURE 13,-1
+		X_MOVEMENT 0,-30,0
+		X_SCALING 300, 300, 300
+		X_DRAWOBJ 13, 0
+
+		ALPHAMODE -1
+		X_MAKE2D
+		FOR i=0 TO 640
+			h = DistAtPhi(g_Level, i/16*9)*.2
+			h2 = DistAtPhi(g_Level, (i+1)/16*9)*.2
+			DRAWLINE i, h, i+1, h2, RGB(128 ,255, 128)
+			DRAWLINE i, h2, i+1, h+1, RGB(128 ,255, 128)
+		NEXT
+		ALPHAMODE 0
+		PRINT "Select Stage - " + g_Level, 0, 0
+		ALPHAMODE 1
+		 AnyScroller("                                    use Arrow keys to choose level, press space to select.         press space to select")
+		SHOWSCREEN
+	WEND
+skip:
+	RETURN g_Level
+ENDFUNCTION
+
+
+FUNCTION maximum: a, b
+	IF a>b THEN RETURN a
+	RETURN b
+ENDFUNCTION
+
+FUNCTION minimum: a, b
+	IF a<b THEN RETURN a
+	RETURN b
+ENDFUNCTION
+
+
+
+// ------------------------------------------------------------- //
+//   --- ANYSCROLLER ---
+// ------------------------------------------------------------- //
+FUNCTION  AnyScroller: globtext$
+// Scroller
+LOCAL fx, fy
+	GETFONTSIZE fx, fy
+		scrx=scrx-2; IF scrx<=0; scrx=fx; glchr=glchr+1; IF glchr>LEN(globtext$)+40 THEN glchr=0; ENDIF
+		FOR glnum=-1 TO 800/fx
+			glstr$= MID$(globtext$, glnum+glchr, 1)
+			PRINT glstr$, (glnum*fx)+scrx, 500
+		NEXT
+ENDFUNCTION  // ANYSCROLLER
+
+FUNCTION Statusbar: percent
+	FILLRECT 0, screeny/2-fnty, screenx-1, screeny/2+fnty, RGB(255,255,255)
+	FILLRECT 1+percent*(screenx-2), screeny/2-fnty, screenx-1, screeny/2+fnty, RGB(0,0,255)
+	PRINT INTEGER(percent*100), screenx/2-fntx*2, screeny/2+fnty
+	SHOWSCREEN
+ENDFUNCTION
+
+FUNCTION fire:
+	//fire
+	PLAYSOUND(2,0,1)
+	X_SPOT_LT -2, RGB(255,255,255), ship_pos[0][0]+30, ship_pos[0][1]+8+lft, ship_pos[0][2],ship_pos[0][0]+30, ship_pos[0][1], ship_pos[0][2],0
+	X_LINE ship_pos[0][0]+30, ship_pos[0][1]+8+lft, ship_pos[0][2],ship_pos[0][0]+30, ship_pos[0][1], ship_pos[0][2],5,RGB(255,2,2)
+	RETURN
+ENDFUNCTION
+
+
+FUNCTION WideScroller: filename$
+	// Diese Variablen sind als LOCAL definiert:
+	// filename$
+	LOCAL text$[], a$, maxline, z, dz, dx, y, fx, fy
+	DIM text$[256]
+
+	GETFONTSIZE fx, fy // Neuer, guter Befehl / New and good command (24.10.01)
+
+	fy=fy+8 // Platz lassen / Leave space
+
+	FOR i=0 TO 255
+		GETFILE filename$, i, a$
+		IF a$="NO_FILE" THEN RETURN
+		IF a$="NO_DATA" THEN GOTO skip
+		text$[i]=a$
+		maxline=maxline+1
+	NEXT
+
+	skip:
+
+
+	FOR zt=480 TO 0-maxline*fy STEP -1 // Aufwärts / Move upwards
+		FOR z=0 TO maxline-1
+			dz=z*20+zt
+			dx=(640-LEN(text$[z])*fx)/2
+			IF dz<480 AND dz>-20 THEN PRINT text$[z], dx, dz
+		NEXT
+		SHOWSCREEN
+		IF KEY(57) OR KEY(28) THEN RETURN
+	NEXT
+ENDFUNCTION // WIDESCROLLER
+
+FUNCTION start:
+PLAYMUSIC "Data/intro.mid"
+BLENDSCREEN "Data/start.bmp"
+WHILE TRUE
+X_AUTONORMALS 2
+	phi=phi+GETTIMER()/20; IF phi>=360 THEN phi=phi-360
+	SPRITE 18,0,0
+	ALPHAMODE -1
+	IF KEY(49) 
+	 nomus=1
+	 PRINT ("MUSIC disabled"),200,200
+	 STOPMUSIC
+	ENDIF 
+	AnyScroller("                   press space to start. F1---About")
+	rpt:
+	IF KEY(59) THEN d1=1
+	IF d1=1
+			 WideScroller("readme.txt")
+		 	 d1=0
+	 ENDIF
+IF KEY(57) THEN GOTO skip
+	X_MAKE3D 1,1000,45
+	X_CAMERA 20,3,7,  0,3,0
+	X_AMBIENT_LT 0,RGB(255,255,255)
+	X_SCALING 0.4,0.4,0.4
+	X_SETTEXTURE 2,-1
+	X_SPOT_LT -2,RGB(200,2,124),0,0,0,0,3,0,0
+
+//	X_ROTATION 180, 0,1,0
+	X_ROTATION phi, 0,1,0
+	X_DRAWOBJ 1,0
+
+	SHOWSCREEN
+	HUSH
+WEND
+BLACKSCREEN
+skip:
+details(0)
+BLACKSCREEN
+RETURN
+ENDFUNCTION
+
+FUNCTION details: f
+
+WHILE TRUE
+SPRITE 19,0,0
+IF f=1 THEN PLAYSOUND(4,0,1)
+		IF KEY(28) THEN GOTO skip1
+	PRINT name$,346,126
+	PRINT inst$,349,204
+	PRINT score*100, 108,363
+	SHOWSCREEN
+	WEND
+	skip1:
+	IF f=1 THEN WideScroller("over.txt")
+	RETURN name$
+	BLACKSCREEN
+ENDFUNCTION
+
+
+FUNCTION blast:
+blst=500
+		X_AMBIENT_LT 0,RGB(255,0,0)
+		X_CULLMODE 0
+		ALPHAMODE 1
+		X_SCALING 4,4,4*blst
+		X_MOVEMENT mean_pos[n][0], mean_pos[n][1]+9, mean_pos[n][2]
+		X_ROTATION ship_dir[0][0]+180, 0, 1, 0
+		X_DRAWOBJ 11,0
+
+ENDFUNCTION
+
+FUNCTION attack:
+	p=RND(1)
+	X_LINE ship_pos[0][0]+30/p*2, ship_pos[0][1]+8+lft, ship_pos[0][2]+19/p*2,ship_pos[0][0], ship_pos[0][1], ship_pos[0][2],5,RGB(2,255,2)
+
+ENDFUNCTION
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
